@@ -249,4 +249,128 @@ router.delete('/:id', authenticate, adminOnly, (req, res) => {
   }
 });
 
+// POST /api/service-requests/:id/convert - Convert service request to booking or visa application (Admin Only)
+router.post('/:id/convert', authenticate, adminOnly, (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const sr = db.prepare('SELECT * FROM service_requests WHERE id = ?').get(id);
+    if (!sr) {
+      return res.status(404).json({ error: 'Service request not found.' });
+    }
+
+    if (sr.status === 'completed') {
+      return res.status(400).json({ error: 'Service request is already completed/converted.' });
+    }
+
+    // Check if the customer user exists or create a temp customer if needed
+    let userId = sr.user_id;
+    if (!userId) {
+      const user = db.prepare('SELECT id FROM users WHERE email = ?').get(sr.email.toLowerCase());
+      if (user) {
+        userId = user.id;
+      } else {
+        // Create customer account
+        const bcrypt = require('bcryptjs');
+        const tempPassword = 'welcome' + Math.floor(1000 + Math.random() * 9000);
+        const hash = bcrypt.hashSync(tempPassword, 10);
+        const userInsert = db.prepare(`
+          INSERT INTO users (name, email, password_hash, phone, role, status)
+          VALUES (?, ?, ?, ?, 'customer', 'active')
+        `).run(sr.name, sr.email.toLowerCase(), hash, sr.phone || '');
+        userId = userInsert.lastInsertRowid;
+      }
+    }
+
+    let resultMsg = '';
+    let targetRef = '';
+
+    if (sr.service_type === 'visa') {
+      // Convert to Visa Application
+      const appRef = 'VISA-' + Math.floor(100000 + Math.random() * 900000);
+      targetRef = appRef;
+
+      // Parse details if it contains specific fields
+      let details = {};
+      try {
+        details = JSON.parse(sr.details_json || '{}');
+      } catch (e) {}
+
+      db.prepare(`
+        INSERT INTO visa_applications (
+          app_ref, user_id, customer_name, customer_email, customer_phone, country, nationality,
+          purpose, status, assessment_json, documents_json, notes, admin_notes, assigned_to,
+          travelers_json, payment_info_json, comments_json
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'submitted', '{}', '[]', ?, ?, ?, '[]', '{}', '[]')
+      `).run(
+        appRef,
+        userId,
+        sr.name,
+        sr.email.toLowerCase(),
+        sr.phone || '',
+        sr.country || details.country || 'Schengen',
+        details.nationality || '',
+        details.purpose || 'tourism',
+        details.notes || sr.admin_notes || 'Converted from Service Request ' + sr.ref,
+        `Converted from Service Request ${sr.ref}. Initial notes: ${sr.admin_notes || ''}`,
+        sr.assigned_to
+      );
+
+      resultMsg = `Successfully converted to Visa Application (${appRef})`;
+
+    } else {
+      // Convert to Booking (e.g. holiday_package, flight, hotel, consultation, other)
+      const bookingRef = 'BKG-' + Math.floor(100000 + Math.random() * 900000);
+      targetRef = bookingRef;
+
+      let details = {};
+      try {
+        details = JSON.parse(sr.details_json || '{}');
+      } catch (e) {}
+
+      // Try to find package title or details
+      let packageTitle = details.package_title || details.holiday_package || (sr.service_type.toUpperCase() + ' Booking');
+      let packageId = details.package_id || null;
+      let totalPrice = details.price || details.total_price || 0.0;
+      let travelDate = details.travel_date || details.depart_date || '';
+      let travelers = details.travelers || details.passengers || 1;
+
+      db.prepare(`
+        INSERT INTO bookings (
+          booking_ref, user_id, package_id, package_title, customer_name, customer_email, customer_phone,
+          travel_date, travelers, total_price, status, payment_status, notes, admin_notes, assigned_to
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', 'pending', ?, ?, ?)
+      `).run(
+        bookingRef,
+        userId,
+        packageId,
+        packageTitle,
+        sr.name,
+        sr.email.toLowerCase(),
+        sr.phone || '',
+        travelDate,
+        travelers,
+        totalPrice,
+        details.notes || sr.admin_notes || 'Converted from Service Request ' + sr.ref,
+        `Converted from Service Request ${sr.ref}. Initial notes: ${sr.admin_notes || ''}`,
+        sr.assigned_to
+      );
+
+      resultMsg = `Successfully converted to Booking (${bookingRef})`;
+    }
+
+    // Update the service request status to completed and log the conversion reference
+    const updatedNotes = `${sr.admin_notes || ''}\n[System] Converted to ${targetRef} on ${new Date().toLocaleDateString()}`.trim();
+    db.prepare('UPDATE service_requests SET status = "completed", admin_notes = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?')
+      .run(updatedNotes, id);
+
+    res.json({ message: resultMsg, targetRef, status: 'completed' });
+
+  } catch (error) {
+    console.error('Conversion error:', error);
+    res.status(500).json({ error: 'Failed to convert service request. ' + error.message });
+  }
+});
+
 module.exports = router;
+

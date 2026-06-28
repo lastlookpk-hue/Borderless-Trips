@@ -549,6 +549,19 @@ export default function AdminPage() {
     try { await api.put(`/service-requests/${id}`, updates); showToast('Request updated'); await loadServiceReqs(srPage, statusFilter); } catch (err) { showToast(err.message, 'error'); }
   };
 
+  const handleConvertSR = async (sr) => {
+    if (!confirm(`Are you sure you want to convert this service request to a live ${sr.service_type === 'visa' ? 'Visa Application' : 'Booking'}? This will also automatically ensure the client has an active customer account.`)) return;
+    try {
+      const res = await api.post(`/service-requests/${sr.id}/convert`);
+      showToast(res.message);
+      setDetailModal(null);
+      await loadAllData();
+      await loadServiceReqs(srPage, statusFilter);
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
+  };
+
   const handleSaveCustomer = async () => {
     try {
       const payload = {
@@ -929,6 +942,94 @@ export default function AdminPage() {
 
   const serviceTypeLabel = (t) => ({ visa:'Visa Service', holiday_package:'Holiday Package', flight:'Flight Booking', hotel:'Hotel Booking', consultation:'Consultation', other:'Other' }[t] || t);
 
+  const formatParsedJSON = (key, parsed) => {
+    if (Array.isArray(parsed)) {
+      if (parsed.length === 0) return 'None';
+      
+      // For travelers list
+      if (key.includes('traveler') || key.includes('passenger')) {
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            {parsed.map((item, idx) => (
+              <div key={idx} style={{ background: 'var(--color-bg-alt)', padding: '6px 10px', borderRadius: 6, fontSize: 12 }}>
+                <strong>{item.name || item.fullName || `Traveler ${idx + 1}`}</strong> 
+                {item.passport && ` (Passport: ${item.passport})`} 
+                {item.relationship && ` - ${item.relationship}`}
+              </div>
+            ))}
+          </div>
+        );
+      }
+      
+      // For general list
+      return (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+          {parsed.map((item, idx) => {
+            if (typeof item === 'object') {
+              return (
+                <span key={idx} style={{ fontSize: 11, background: 'var(--color-bg-alt)', padding: '3px 8px', borderRadius: 4 }}>
+                  {Object.entries(item).map(([k, v]) => `${k}: ${v}`).join(', ')}
+                </span>
+              );
+            }
+            return (
+              <span key={idx} style={{ fontSize: 11, background: 'var(--color-bg-alt)', padding: '3px 8px', borderRadius: 4 }}>
+                {String(item)}
+              </span>
+            );
+          })}
+        </div>
+      );
+    } else if (typeof parsed === 'object') {
+      const entries = Object.entries(parsed);
+      if (entries.length === 0) return 'Empty';
+      return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          {entries.map(([k, v]) => (
+            <div key={k} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, borderBottom: '1px dashed var(--color-border)', paddingBottom: 2 }}>
+              <span className="text-muted" style={{ textTransform: 'capitalize', marginRight: 8 }}>{k.replace(/_/g, ' ')}:</span>
+              <span style={{ fontWeight: 600 }}>{typeof v === 'object' ? JSON.stringify(v) : String(v)}</span>
+            </div>
+          ))}
+        </div>
+      );
+    }
+    return JSON.stringify(parsed);
+  };
+
+  const formatValue = (key, val) => {
+    if (val === null || val === '') return '-';
+    
+    // If it's a string, try to parse it as JSON
+    if (typeof val === 'string') {
+      const trimmed = val.trim();
+      if ((trimmed.startsWith('{') && trimmed.endsWith('}')) || (trimmed.startsWith('[') && trimmed.endsWith(']'))) {
+        try {
+          const parsed = JSON.parse(val);
+          return formatParsedJSON(key, parsed);
+        } catch (e) {
+          // Fallback to raw string
+        }
+      }
+    }
+    
+    if (typeof val === 'object') {
+      return formatParsedJSON(key, val);
+    }
+
+    // Handle date fields
+    if (key.includes('date') || key.includes('created_at') || key.includes('updated_at')) {
+      try {
+        const d = new Date(val);
+        if (!isNaN(d.getTime())) {
+          return d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        }
+      } catch(e) {}
+    }
+    
+    return String(val);
+  };
+
   const kpis = [
     { label:'Total Bookings', value:stats?.kpis?.totalBookings || bookings.length, icon:Package, color:'#0ea5e9', sub:`${stats?.thisWeek?.bookings||0} this week` },
     { label:'Revenue', value:`£${(stats?.kpis?.revenue||0).toLocaleString()}`, icon:DollarSign, color:'#10b981', sub:`£${(stats?.thisWeek?.revenue||0).toLocaleString()} this week` },
@@ -1085,6 +1186,16 @@ export default function AdminPage() {
                                   </>}
                                   {sr.status==='accepted' && <button className="admin-action-btn info" onClick={()=>handleUpdateSR(sr.id,{status:'in_progress'})}>Start</button>}
                                   {sr.status==='in_progress' && <button className="admin-action-btn primary" onClick={()=>handleUpdateSR(sr.id,{status:'completed'})}>Complete</button>}
+                                  {sr.status !== 'completed' && sr.status !== 'rejected' && (
+                                    <button 
+                                      className="admin-action-btn success" 
+                                      onClick={() => handleConvertSR(sr)}
+                                      title={sr.service_type === 'visa' ? 'Convert to Visa Application' : 'Convert to Booking'}
+                                      style={{ display:'flex', alignItems:'center', gap:2 }}
+                                    >
+                                      <RefreshCw size={10}/> Convert
+                                    </button>
+                                  )}
                                   <button className="admin-action-btn info" onClick={()=>setDetailModal({type:'sr',data:sr})}><Eye size={12}/></button>
                                 </div>
                               </td>
@@ -2434,23 +2545,30 @@ export default function AdminPage() {
               {Object.entries(detailModal.data).filter(([k])=>!['id','user_id','assigned_to','details_json','assessment_json','documents_json','password_hash'].includes(k)).map(([key, val]) => (
                 <div key={key} style={{ fontSize:13 }}>
                   <div className="text-muted" style={{ fontSize:11, textTransform:'uppercase', marginBottom:2 }}>{key.replace(/_/g,' ')}</div>
-                  <div style={{ fontWeight:600 }}>{typeof val === 'object' ? JSON.stringify(val) : (val === null || val === '' ? '-' : String(val))}</div>
+                  <div style={{ fontWeight:600 }}>{formatValue(key, val)}</div>
                 </div>
               ))}
             </div>
-            {detailModal.data.details_json && typeof detailModal.data.details_json === 'object' && Object.keys(detailModal.data.details_json).length > 0 && (
-              <div style={{ marginTop:20 }}>
-                <h4 style={{ fontSize:13, fontWeight:700, marginBottom:8 }}>Request Details</h4>
-                <div style={{ background:'var(--color-bg)', padding:14, borderRadius:8, fontSize:13 }}>
-                  {Object.entries(detailModal.data.details_json).map(([k,v]) => (
-                    <div key={k} style={{ display:'flex', justifyContent:'space-between', padding:'4px 0', borderBottom:'1px solid var(--color-border)' }}>
-                      <span className="text-muted" style={{ textTransform:'capitalize' }}>{k.replace(/_/g,' ')}</span>
-                      <span style={{ fontWeight:600 }}>{String(v)}</span>
-                    </div>
-                  ))}
+            {(() => {
+              let detailsObj = {};
+              try {
+                detailsObj = typeof detailModal.data.details_json === 'string' ? JSON.parse(detailModal.data.details_json) : (detailModal.data.details_json || {});
+              } catch(e) {}
+              if (!detailsObj || Object.keys(detailsObj).length === 0) return null;
+              return (
+                <div style={{ marginTop:20 }}>
+                  <h4 style={{ fontSize:13, fontWeight:700, marginBottom:8 }}>Request Details</h4>
+                  <div style={{ background:'var(--color-bg)', padding:14, borderRadius:8, fontSize:13 }}>
+                    {Object.entries(detailsObj).map(([k,v]) => (
+                      <div key={k} style={{ display:'flex', justifyContent:'space-between', padding:'4px 0', borderBottom:'1px solid var(--color-border)' }}>
+                        <span className="text-muted" style={{ textTransform:'capitalize' }}>{k.replace(/_/g,' ')}</span>
+                        <span style={{ fontWeight:600 }}>{formatValue(k, v)}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
+              );
+            })()}
             {detailModal.type === 'visa' && (
               <div style={{ marginTop:20, borderTop:'1px solid var(--color-border)', paddingTop:20 }}>
                 <h4 style={{ fontSize:14, fontWeight:700, marginBottom:12, display:'flex', alignItems:'center', gap:6 }}><ClipboardList size={16} color="var(--color-secondary)"/> 📁 Document Checklist Management</h4>
@@ -2500,7 +2618,7 @@ export default function AdminPage() {
                         const currentDocs = detailModal.data.documents_json || [];
                         const nextDocs = [...currentDocs];
                         for (const temp of filteredTemplates) {
-                          if (!nextDocs.some(d => d.name.toLowerCase() === temp.name.toLowerCase() && (d.traveler_name || 'Primary Applicant') === travelerName)) {
+                          if (!nextDocs.some(d => d.name && d.name.toLowerCase() === temp.name.toLowerCase() && (d.traveler_name || 'Primary Applicant') === travelerName)) {
                             nextDocs.push({
                               id: 'req_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
                               name: temp.name,
@@ -2564,7 +2682,7 @@ export default function AdminPage() {
                         const currentDocs = detailModal.data.documents_json || [];
                         const nextDocs = [...currentDocs];
                         for (const temp of folderTemplates) {
-                          if (!nextDocs.some(d => d.name.toLowerCase() === temp.name.toLowerCase() && (d.traveler_name || 'Primary Applicant') === travelerName)) {
+                          if (!nextDocs.some(d => d.name && d.name.toLowerCase() === temp.name.toLowerCase() && (d.traveler_name || 'Primary Applicant') === travelerName)) {
                             nextDocs.push({
                               id: 'req_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
                               name: temp.name,
@@ -2747,7 +2865,7 @@ export default function AdminPage() {
               </div>
             )}
             
-            <CaseExtensions detailModal={detailModal} setDetailModal={setDetailModal} loadAllData={loadAllData} user={user} showToast={showToast} />
+            <CaseExtensions detailModal={detailModal} setDetailModal={setDetailModal} loadAllData={loadAllData} user={user} showToast={showToast} handleFileUpload={handleFileUpload} />
 
             <div style={{ marginTop:20 }}>
               <label className="form-label">Admin Notes</label>
@@ -2797,6 +2915,29 @@ export default function AdminPage() {
                 } catch (err) { showToast(err.message, 'error'); }
               }}><Save size={14}/> Save Notes</button>
             </div>
+            
+            {detailModal.type === 'sr' && detailModal.data.status !== 'completed' && detailModal.data.status !== 'rejected' && (
+              <div style={{ marginTop:24, borderTop:'1px solid var(--color-border)', paddingTop:20 }}>
+                <h4 style={{ fontSize:14, fontWeight:700, marginBottom:12, display:'flex', alignItems:'center', gap:6 }}>
+                  ⚡ Workflow Actions
+                </h4>
+                <div style={{ background:'rgba(255,255,255,0.02)', padding:16, borderRadius:12, border:'1px solid var(--color-border)', display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:12 }}>
+                  <div>
+                    <div style={{ fontWeight:600, fontSize:13 }}>Promote Inquiry in Service Queue</div>
+                    <div className="text-muted" style={{ fontSize:11, marginTop:2 }}>
+                      Convert this request into a live {detailModal.data.service_type === 'visa' ? 'Visa Application' : 'Booking'} record and create customer credentials.
+                    </div>
+                  </div>
+                  <button 
+                    className="btn btn-primary btn-sm"
+                    onClick={() => handleConvertSR(detailModal.data)}
+                    style={{ display:'flex', alignItems:'center', gap:6 }}
+                  >
+                    <RefreshCw size={14}/> Move to {detailModal.data.service_type === 'visa' ? 'Visa Applications' : 'Bookings'}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </Modal>

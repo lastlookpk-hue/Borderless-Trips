@@ -272,7 +272,7 @@ export default function ServiceRequestPage() {
 
             {/* STEP 1: SERVICE TYPE */}
             {step === 1 && (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 12 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 16 }}>
                 {serviceTypes.map(item => {
                   const Icon = item.icon;
                   const isSelected = formData.service_type === item.id;
@@ -283,33 +283,53 @@ export default function ServiceRequestPage() {
                       onClick={() => setFormData({ ...formData, service_type: item.id })}
                       style={{
                         textAlign: 'left',
-                        padding: 16,
-                        borderRadius: 12,
+                        padding: '20px 24px',
+                        borderRadius: '16px',
                         border: `2px solid ${isSelected ? 'var(--color-secondary)' : 'var(--color-border)'}`,
-                        background: isSelected ? 'rgba(14, 165, 233, 0.04)' : 'var(--color-surface)',
+                        background: isSelected ? 'var(--color-accent-bg)' : 'var(--color-surface)',
                         cursor: 'pointer',
-                        transition: 'all 0.2s',
+                        transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
                         display: 'flex',
-                        gap: 14,
-                        alignItems: 'center'
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        gap: 16,
+                        boxShadow: isSelected ? '0 8px 30px rgba(170, 59, 255, 0.08)' : 'none',
+                        transform: isSelected ? 'translateY(-2px)' : 'none',
                       }}
                     >
+                      <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
+                        <div style={{
+                          width: 48,
+                          height: 48,
+                          borderRadius: 12,
+                          background: isSelected ? 'var(--color-secondary)' : `${item.color}15`,
+                          color: isSelected ? 'white' : item.color,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          flexShrink: 0,
+                          transition: 'all 0.2s'
+                        }}>
+                          <Icon size={24} />
+                        </div>
+                        <div>
+                          <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--color-text-title)' }}>{item.label}</div>
+                          <div className="text-muted" style={{ fontSize: 12, marginTop: 4 }}>{item.desc}</div>
+                        </div>
+                      </div>
                       <div style={{
-                        width: 44,
-                        height: 44,
-                        borderRadius: 10,
-                        background: `${item.color}15`,
-                        color: item.color,
+                        width: 20,
+                        height: 20,
+                        borderRadius: '50%',
+                        border: `2px solid ${isSelected ? 'var(--color-secondary)' : 'var(--color-border)'}`,
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
+                        background: isSelected ? 'var(--color-secondary)' : 'transparent',
+                        transition: 'all 0.2s',
                         flexShrink: 0
                       }}>
-                        <Icon size={22} />
-                      </div>
-                      <div>
-                        <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--color-text)' }}>{item.label}</div>
-                        <div className="text-muted" style={{ fontSize: 11, marginTop: 2 }}>{item.desc}</div>
+                        {isSelected && <Check size={12} color="white" strokeWidth={3} />}
                       </div>
                     </button>
                   );
@@ -320,8 +340,11 @@ export default function ServiceRequestPage() {
             {/* STEP 2: DETAILS */}
             {step === 2 && (
               <div>
-                <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 16 }}>📝 Provide Request Details</h3>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+                <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 8, color: 'var(--color-text-title)' }}>
+                  <span>📝</span> Provide Request Details
+                </h3>
+                
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18 }}>
                   
                   {/* Destination Country */}
                   {['visa', 'holiday_package', 'hotel'].includes(formData.service_type) && (
@@ -352,13 +375,16 @@ export default function ServiceRequestPage() {
                     <div className="form-group">
                       <label className="form-label">Purpose of Visit</label>
                       <select className="form-input form-select" value={formData.purpose} onChange={e => setFormData({ ...formData, purpose: e.target.value })}>
-                        <option value="tourism">Tourism</option>
-                        <option value="business">Business</option>
+                        <option value="tourism">Tourism / Sightseeing</option>
+                        <option value="business">Business / Meetings</option>
                         <option value="family">Family / Friend Visit</option>
-                        <option value="study">Study</option>
+                        <option value="study">Study / Academic</option>
                         <option value="medical">Medical Treatment</option>
                       </select>
                     </div>
+
+                    <div style={{ gridColumn: 'span 2', height: 1, background: 'var(--color-border)', margin: '8px 0' }} />
+
                     <div className="form-group">
                       <label className="form-label">Employment Status</label>
                       <select className="form-input form-select" value={formData.employment} onChange={e => setFormData({ ...formData, employment: e.target.value })}>
@@ -373,24 +399,45 @@ export default function ServiceRequestPage() {
                       <label className="form-label">Monthly Income (£)</label>
                       <input className="form-input" type="number" placeholder="e.g. 2500" value={formData.monthlyIncome} onChange={e => setFormData({ ...formData, monthlyIncome: e.target.value })} />
                     </div>
+
                     <div className="form-group">
                       <label className="form-label">Previous Schengen Visa?</label>
-                      <select className="form-input form-select" value={formData.previousVisa} onChange={e => setFormData({ ...formData, previousVisa: e.target.value })}>
-                        <option value="no">No, this is my first time</option>
-                        <option value="yes">Yes, in the last 59 months</option>
-                      </select>
+                      <SegmentedControl 
+                        value={formData.previousVisa}
+                        onChange={val => setFormData({ ...formData, previousVisa: val })}
+                        options={[
+                          { label: 'No, first time', value: 'no' },
+                          { label: 'Yes, in last 59m', value: 'yes' },
+                        ]}
+                      />
                     </div>
                     <div className="form-group">
                       <label className="form-label">Any Previous Refusals?</label>
-                      <select className="form-input form-select" value={formData.previousRejection} onChange={e => setFormData({ ...formData, previousRejection: e.target.value })}>
-                        <option value="no">No</option>
-                        <option value="yes">Yes (any Schengen country)</option>
-                      </select>
+                      <SegmentedControl 
+                        value={formData.previousRejection}
+                        onChange={val => setFormData({ ...formData, previousRejection: val })}
+                        options={[
+                          { label: 'No', value: 'no' },
+                          { label: 'Yes', value: 'yes' },
+                        ]}
+                      />
                     </div>
                   </>)}
 
                   {/* Flight Fields */}
                   {formData.service_type === 'flight' && (<>
+                    <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                      <label className="form-label">Trip Type</label>
+                      <SegmentedControl 
+                        value={formData.tripType}
+                        onChange={val => setFormData({ ...formData, tripType: val })}
+                        options={[
+                          { label: 'Round Trip (Return)', value: 'return' },
+                          { label: 'One Way', value: 'one_way' },
+                          { label: 'Multi-City / Custom', value: 'multi_city' },
+                        ]}
+                      />
+                    </div>
                     <div className="form-group">
                       <label className="form-label">From City/Airport *</label>
                       <input className="form-input" placeholder="e.g. London LHR" value={formData.fromCity} onChange={e => setFormData({ ...formData, fromCity: e.target.value })} required />
@@ -403,10 +450,12 @@ export default function ServiceRequestPage() {
                       <label className="form-label">Departure Date *</label>
                       <input className="form-input" type="date" value={formData.travelDate} onChange={e => setFormData({ ...formData, travelDate: e.target.value })} required />
                     </div>
-                    <div className="form-group">
-                      <label className="form-label">Return Date (if return)</label>
-                      <input className="form-input" type="date" value={formData.duration} onChange={e => setFormData({ ...formData, duration: e.target.value })} />
-                    </div>
+                    {formData.tripType === 'return' && (
+                      <div className="form-group">
+                        <label className="form-label">Return Date *</label>
+                        <input className="form-input" type="date" value={formData.duration} onChange={e => setFormData({ ...formData, duration: e.target.value })} required />
+                      </div>
+                    )}
                     <div className="form-group">
                       <label className="form-label">Travelers</label>
                       <input className="form-input" type="number" min="1" value={formData.travelers} onChange={e => setFormData({ ...formData, travelers: e.target.value })} />
@@ -416,16 +465,8 @@ export default function ServiceRequestPage() {
                       <select className="form-input form-select" value={formData.flightClass} onChange={e => setFormData({ ...formData, flightClass: e.target.value })}>
                         <option value="economy">Economy</option>
                         <option value="premium_economy">Premium Economy</option>
-                        <option value="business">Business</option>
+                        <option value="business">Business Class</option>
                         <option value="first">First Class</option>
-                      </select>
-                    </div>
-                    <div className="form-group" style={{ gridColumn: 'span 2' }}>
-                      <label className="form-label">Trip Type</label>
-                      <select className="form-input form-select" value={formData.tripType} onChange={e => setFormData({ ...formData, tripType: e.target.value })}>
-                        <option value="return">Round Trip (Return)</option>
-                        <option value="one_way">One Way</option>
-                        <option value="multi_city">Multi-City / Custom</option>
                       </select>
                     </div>
                   </>)}
@@ -437,7 +478,7 @@ export default function ServiceRequestPage() {
                       <input className="form-input" type="date" value={formData.travelDate} onChange={e => setFormData({ ...formData, travelDate: e.target.value })} required />
                     </div>
                     <div className="form-group">
-                      <label className="form-label">Duration (e.g. 5 days) *</label>
+                      <label className="form-label">Duration (e.g. 7 Days) *</label>
                       <input className="form-input" placeholder="e.g. 7 Days" value={formData.duration} onChange={e => setFormData({ ...formData, duration: e.target.value })} required />
                     </div>
                     <div className="form-group">
@@ -484,53 +525,70 @@ export default function ServiceRequestPage() {
             {/* STEP 3: CONTACT INFO & AUTO-SIGNUP */}
             {step === 3 && (
               <div>
-                <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 16 }}>📞 Contact Information</h3>
-                <div style={{ display: 'grid', gap: 14 }}>
+                <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 8, color: 'var(--color-text-title)' }}>
+                  <span>📞</span> Contact Information
+                </h3>
+                
+                <div style={{ display: 'grid', gap: 16 }}>
                   <div className="form-group">
                     <label className="form-label">Full Name *</label>
                     <div style={{ position: 'relative' }}>
-                      <User size={15} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)' }} />
-                      <input className="form-input" style={{ paddingLeft: 36 }} placeholder="Your name" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} required disabled={!!user} />
+                      <User size={16} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)' }} />
+                      <input className="form-input" style={{ paddingLeft: 40 }} placeholder="Your name" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} required disabled={!!user} />
                     </div>
                   </div>
+                  
                   <div className="form-group">
                     <label className="form-label">Email Address *</label>
                     <div style={{ position: 'relative' }}>
-                      <Mail size={15} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)' }} />
-                      <input className="form-input" style={{ paddingLeft: 36 }} type="email" placeholder="Your email address" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} required disabled={!!user} />
+                      <Mail size={16} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)' }} />
+                      <input className="form-input" style={{ paddingLeft: 40 }} type="email" placeholder="Your email address" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} required disabled={!!user} />
                     </div>
                   </div>
+                  
                   <div className="form-group">
                     <label className="form-label">Phone Number</label>
                     <div style={{ position: 'relative' }}>
-                      <PhoneCall size={15} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)' }} />
-                      <input className="form-input" style={{ paddingLeft: 36 }} placeholder="e.g. +44 7911 123456" value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} />
+                      <PhoneCall size={16} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)' }} />
+                      <input className="form-input" style={{ paddingLeft: 40 }} placeholder="e.g. +44 7911 123456" value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} />
                     </div>
                   </div>
 
                   {!user && (
-                    <div style={{ marginTop: 10, background: 'rgba(14, 165, 233, 0.03)', border: '1px solid var(--color-border)', borderRadius: 12, padding: 16 }}>
-                      <label style={{ display: 'flex', gap: 10, alignItems: 'center', cursor: 'pointer', fontWeight: 600, fontSize: 13, color: 'var(--color-text)' }}>
+                    <div style={{ 
+                      marginTop: 12, 
+                      background: 'var(--color-accent-bg)', 
+                      border: '1px solid var(--color-accent-border)', 
+                      borderRadius: 16, 
+                      padding: 20,
+                      boxShadow: '0 4px 20px rgba(170, 59, 255, 0.03)'
+                    }}>
+                      <label style={{ display: 'flex', gap: 12, alignItems: 'center', cursor: 'pointer', fontWeight: 700, fontSize: 14, color: 'var(--color-text-title)' }}>
                         <input 
                           type="checkbox" 
                           checked={formData.create_account} 
                           onChange={e => setFormData({ ...formData, create_account: e.target.checked })}
-                          style={{ accentColor: 'var(--color-secondary)' }}
+                          style={{ 
+                            width: 18, 
+                            height: 18, 
+                            accentColor: 'var(--color-accent)', 
+                            cursor: 'pointer' 
+                          }}
                         />
                         <span>🔑 Auto-create a portal account with this email</span>
                       </label>
-                      <p className="text-muted" style={{ fontSize: 11, marginLeft: 22, marginTop: 4 }}>
+                      <p className="text-muted" style={{ fontSize: 12, marginLeft: 30, marginTop: 6, lineHeight: 1.5 }}>
                         Save time! Track your request status, chat directly with visa agents, and upload files in real time.
                       </p>
                       
                       {formData.create_account && (
-                        <div className="form-group" style={{ marginTop: 14 }}>
+                        <div className="form-group" style={{ marginTop: 16 }}>
                           <label className="form-label">Choose Password (Optional)</label>
                           <div style={{ position: 'relative' }}>
-                            <Lock size={15} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)' }} />
+                            <Lock size={16} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)' }} />
                             <input 
                               className="form-input" 
-                              style={{ paddingLeft: 36 }}
+                              style={{ paddingLeft: 40 }}
                               type="password" 
                               placeholder="Leave blank for auto-generated password" 
                               value={formData.password} 
@@ -547,37 +605,76 @@ export default function ServiceRequestPage() {
 
             {/* STEP 4: SUCCESS SUMMARY */}
             {step === 4 && result && (
-              <div style={{ textAlign: 'center', padding: '10px 0' }}>
-                <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'var(--color-success)15', color: 'var(--color-success)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
-                  <CheckCircle2 size={36} />
+              <div style={{ textAlign: 'center', padding: '12px 0' }}>
+                <div style={{ 
+                  width: 72, 
+                  height: 72, 
+                  borderRadius: '50%', 
+                  background: 'rgba(16, 185, 129, 0.1)', 
+                  color: '#10b981', 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center', 
+                  margin: '0 auto 24px' 
+                }}>
+                  <CheckCircle2 size={40} />
                 </div>
-                <h1 className="heading-3" style={{ margin: '0 0 8px', fontSize: 24 }}>Request Submitted!</h1>
-                <p className="text-muted" style={{ fontSize: 14, marginBottom: 24 }}>We have received your service request. A visa agent or manager will review it shortly.</p>
+                <h1 className="heading-3" style={{ margin: '0 0 10px', fontSize: 26, color: 'var(--color-text-title)' }}>Request Submitted!</h1>
+                <p className="text-muted" style={{ fontSize: 14, marginBottom: 28, maxWidth: 460, marginLeft: 'auto', marginRight: 'auto' }}>We have successfully received your service request. A visa agent or manager will review it shortly.</p>
 
                 {/* Reference Code Panel */}
-                <div style={{ background: 'var(--color-bg-alt)', padding: 16, borderRadius: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center', maxWidth: 400, margin: '0 auto 24px', border: '1px solid var(--color-border)' }}>
+                <div style={{ 
+                  background: 'var(--color-bg-alt)', 
+                  padding: '18px 24px', 
+                  borderRadius: 16, 
+                  display: 'flex', 
+                  justifyContent: 'space-between', 
+                  alignItems: 'center', 
+                  maxWidth: 440, 
+                  margin: '0 auto 28px', 
+                  border: '1px solid var(--color-border)',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.02)'
+                }}>
                   <div style={{ textAlign: 'left' }}>
-                    <div style={{ fontSize: 11, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Reference Code</div>
-                    <div style={{ fontSize: 18, fontWeight: 700, fontFamily: 'monospace', color: 'var(--color-primary)' }}>{result.request.ref}</div>
+                    <div style={{ fontSize: 11, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>Reference Code</div>
+                    <div style={{ fontSize: 20, fontWeight: 800, fontFamily: 'var(--mono)', color: 'var(--color-accent)', marginTop: 4 }}>{result.request.ref}</div>
                   </div>
                   <StatusBadgePublic status="new" />
                 </div>
 
                 {/* Auto Account Creation Info */}
                 {result.autoCreated && (
-                  <div style={{ maxWidth: 440, margin: '0 auto 24px', border: '1px dashed var(--color-secondary)', borderRadius: 12, padding: 18, background: 'rgba(14, 165, 233, 0.01)', textAlign: 'left' }}>
-                    <h4 style={{ margin: '0 0 6px', fontSize: 13, fontWeight: 700, color: 'var(--color-text)' }}>🔑 Your Account Details</h4>
-                    <p className="text-muted" style={{ fontSize: 11, marginBottom: 12 }}>
+                  <div style={{ 
+                    maxWidth: 440, 
+                    margin: '0 auto 28px', 
+                    border: '1px dashed var(--color-accent)', 
+                    borderRadius: 16, 
+                    padding: 20, 
+                    background: 'var(--color-accent-bg)', 
+                    textAlign: 'left' 
+                  }}>
+                    <h4 style={{ margin: '0 0 8px', fontSize: 14, fontWeight: 700, color: 'var(--color-text-title)' }}>🔑 Your Account Details</h4>
+                    <p className="text-muted" style={{ fontSize: 12, marginBottom: 16, lineHeight: 1.5 }}>
                       We have automatically created a portal account for you. Use these credentials to log in:
                     </p>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 12 }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, fontSize: 13 }}>
                       <div><strong>Email:</strong> {formData.email.toLowerCase()}</div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                         <strong>Temp Password:</strong> 
-                        <code style={{ fontSize: 12, padding: '2px 6px', background: 'var(--color-bg-alt)' }}>{result.tempPassword}</code>
+                        <code style={{ fontSize: 13, padding: '4px 8px', background: 'var(--color-bg)', border: '1px solid var(--color-border)', borderRadius: 4 }}>{result.tempPassword}</code>
                         <button 
                           onClick={handleCopyPassword} 
-                          style={{ background: 'none', border: 'none', color: 'var(--color-secondary)', cursor: 'pointer', padding: 2, display: 'flex', alignItems: 'center' }}
+                          style={{ 
+                            background: 'var(--color-bg)', 
+                            border: '1px solid var(--color-border)', 
+                            borderRadius: 6,
+                            color: 'var(--color-accent)', 
+                            cursor: 'pointer', 
+                            padding: 6, 
+                            display: 'flex', 
+                            alignItems: 'center',
+                            transition: 'all 0.2s' 
+                          }}
                           title="Copy Password"
                         >
                           {copied ? <Check size={14} /> : <Copy size={14} />}
@@ -646,3 +743,36 @@ function StatusBadgePublic({ status }) {
     </span>
   );
 }
+
+function SegmentedControl({ value, onChange, options }) {
+  return (
+    <div style={{ display: 'flex', background: 'var(--color-bg-alt)', padding: 4, borderRadius: 10, border: '1px solid var(--color-border)' }}>
+      {options.map(opt => {
+        const isSelected = value === opt.value;
+        return (
+          <button
+            key={opt.value}
+            type="button"
+            onClick={() => onChange(opt.value)}
+            style={{
+              flex: 1,
+              padding: '8px 12px',
+              borderRadius: 8,
+              fontSize: 13,
+              fontWeight: 600,
+              border: 'none',
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+              background: isSelected ? 'var(--color-accent)' : 'transparent',
+              color: isSelected ? 'white' : 'var(--color-text-muted)',
+              boxShadow: isSelected ? '0 2px 8px rgba(170, 59, 255, 0.2)' : 'none',
+            }}
+          >
+            {opt.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
