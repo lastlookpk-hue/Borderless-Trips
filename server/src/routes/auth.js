@@ -264,4 +264,87 @@ router.put('/customers/:id', authenticate, (req, res) => {
   }
 });
 
+// PUT /api/auth/staff/:id - Update staff account (Admin Only)
+router.put('/staff/:id', authenticate, (req, res) => {
+  if (req.user.role !== 'admin') return res.status(403).json({ error: 'Admin only.' });
+  const { id } = req.params;
+  const { name, email, password, sub_role, status } = req.body;
+
+  if (!name || !email) {
+    return res.status(400).json({ error: 'Name and email are required.' });
+  }
+
+  try {
+    const existingStaff = db.prepare('SELECT id, password_hash FROM users WHERE id = ? AND role = "admin"').get(id);
+    if (!existingStaff) {
+      return res.status(404).json({ error: 'Staff member not found.' });
+    }
+
+    // Check if email already used by another user
+    const emailCheck = db.prepare('SELECT id FROM users WHERE email = ? AND id != ?').get(email.toLowerCase(), id);
+    if (emailCheck) {
+      return res.status(400).json({ error: 'Email already in use.' });
+    }
+
+    let passwordHash = existingStaff.password_hash;
+    if (password && password.trim() !== '') {
+      passwordHash = bcrypt.hashSync(password, 10);
+    }
+
+    const validRoles = ['manager', 'agent', 'viewer'];
+    const finalSubRole = validRoles.includes(sub_role) ? sub_role : 'agent';
+    const finalStatus = ['active', 'suspended'].includes(status) ? status : 'active';
+
+    db.prepare(`
+      UPDATE users SET
+        name = ?,
+        email = ?,
+        password_hash = ?,
+        sub_role = ?,
+        status = ?
+      WHERE id = ?
+    `).run(name, email.toLowerCase(), passwordHash, finalSubRole, finalStatus, id);
+
+    res.json({ message: 'Staff member updated successfully.' });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update staff member.' });
+  }
+});
+
+// DELETE /api/auth/staff/:id - Delete staff account (Admin Only)
+router.delete('/staff/:id', authenticate, (req, res) => {
+  if (req.user.role !== 'admin') return res.status(403).json({ error: 'Admin only.' });
+  const { id } = req.params;
+
+  // Prevent self-deletion
+  if (req.user.id === parseInt(id)) {
+    return res.status(400).json({ error: 'You cannot delete your own account.' });
+  }
+
+  try {
+    const existingStaff = db.prepare('SELECT id FROM users WHERE id = ? AND role = "admin"').get(id);
+    if (!existingStaff) {
+      return res.status(404).json({ error: 'Staff member not found.' });
+    }
+
+    // Perform deletions and updates inside a transaction
+    const deleteTransaction = db.transaction(() => {
+      db.prepare('UPDATE bookings SET assigned_to = NULL WHERE assigned_to = ?').run(id);
+      db.prepare('UPDATE visa_applications SET assigned_to = NULL WHERE assigned_to = ?').run(id);
+      db.prepare('UPDATE inquiries SET assigned_to = NULL WHERE assigned_to = ?').run(id);
+      db.prepare('UPDATE flight_requests SET assigned_to = NULL WHERE assigned_to = ?').run(id);
+      db.prepare('UPDATE service_requests SET assigned_to = NULL WHERE assigned_to = ?').run(id);
+      db.prepare('UPDATE users SET assigned_to = NULL WHERE assigned_to = ?').run(id);
+      db.prepare('DELETE FROM users WHERE id = ?').run(id);
+    });
+
+    deleteTransaction();
+
+    res.json({ message: 'Staff member deleted successfully.' });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to delete staff member.' });
+  }
+});
+
 module.exports = router;
+

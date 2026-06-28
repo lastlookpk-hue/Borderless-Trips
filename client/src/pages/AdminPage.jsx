@@ -409,6 +409,7 @@ export default function AdminPage() {
   const [detailModal, setDetailModal] = useState(null);
   const [countryModal, setCountryModal] = useState(false);
   const [staffModal, setStaffModal] = useState(false);
+  const [editingStaff, setEditingStaff] = useState(null);
   const [editingPkg, setEditingPkg] = useState(null);
   const [editingBlog, setEditingBlog] = useState(null);
   const [msgInput, setMsgInput] = useState('');
@@ -422,7 +423,7 @@ export default function AdminPage() {
   const emptyBlog = { title:'', content:'', excerpt:'', cover_image:'', category:'Travel Guide', published:1 };
   const [blogForm, setBlogForm] = useState(emptyBlog);
   const [countryForm, setCountryForm] = useState({ name:'', code:'', region:'schengen', visa_required:1 });
-  const [staffForm, setStaffForm] = useState({ name:'', email:'', password:'', sub_role:'agent' });
+  const [staffForm, setStaffForm] = useState({ name:'', email:'', password:'', sub_role:'agent', status:'active' });
   const [notesInput, setNotesInput] = useState('');
 
   // Doc templates & customer & creation modals
@@ -753,9 +754,52 @@ export default function AdminPage() {
   };
   const handleDeleteCountry = async (id) => { try { await api.delete(`/countries/${id}`); showToast('Country deactivated'); await loadAllData(); } catch (err) { showToast(err.message, 'error'); } };
 
-  // Staff
-  const handleCreateStaff = async () => {
-    try { await api.post('/auth/create-staff', staffForm); showToast('Staff account created'); setStaffModal(false); setStaffForm({ name:'', email:'', password:'', sub_role:'agent' }); await loadAllData(); } catch (err) { showToast(err.message, 'error'); }
+  // Staff Access CRUD
+  const handleAddStaffClick = () => {
+    setEditingStaff(null);
+    setStaffForm({ name:'', email:'', password:'', sub_role:'agent', status:'active' });
+    setStaffModal(true);
+  };
+
+  const handleEditStaffClick = (staff) => {
+    setEditingStaff(staff);
+    setStaffForm({
+      name: staff.name,
+      email: staff.email,
+      password: '',
+      sub_role: staff.sub_role || 'agent',
+      status: staff.status || 'active'
+    });
+    setStaffModal(true);
+  };
+
+  const handleSaveStaff = async () => {
+    try {
+      if (editingStaff) {
+        await api.put(`/auth/staff/${editingStaff.id}`, staffForm);
+        showToast('Staff account updated');
+      } else {
+        await api.post('/auth/create-staff', staffForm);
+        showToast('Staff account created');
+      }
+      setStaffModal(false);
+      setEditingStaff(null);
+      setStaffForm({ name:'', email:'', password:'', sub_role:'agent', status:'active' });
+      await loadAllData();
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
+  };
+
+  const handleDeleteStaff = async (id) => {
+    if (!confirm('Are you sure you want to delete this staff member?')) return;
+    try {
+      await api.delete(`/auth/staff/${id}`);
+      showToast('Staff member deleted');
+      await loadAllData();
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
   };
 
   // Settings
@@ -1730,11 +1774,11 @@ export default function AdminPage() {
                   <div>
                     <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16 }}>
                       <h1 className="heading-2">Staff Members ({staffList.length})</h1>
-                      <button className="btn btn-primary btn-sm" onClick={() => { setStaffForm({ name:'', email:'', password:'', sub_role:'agent' }); setStaffModal(true); }}><UserPlus size={14}/> Add Staff</button>
+                      <button className="btn btn-primary btn-sm" onClick={handleAddStaffClick}><UserPlus size={14}/> Add Staff</button>
                     </div>
                     <div className="card admin-table-wrap">
                       <table className="admin-table">
-                        <thead><tr>{['Name','Email','Role','Status','Joined'].map(h=><th key={h}>{h}</th>)}</tr></thead>
+                        <thead><tr>{['Name','Email','Role','Status','Joined','Actions'].map(h=><th key={h}>{h}</th>)}</tr></thead>
                         <tbody>
                           {staffList.map((s,i) => (
                             <tr key={i}>
@@ -1743,9 +1787,23 @@ export default function AdminPage() {
                               <td><StatusBadge status={s.sub_role || 'manager'}/></td>
                               <td><StatusBadge status={s.status || 'active'}/></td>
                               <td style={{ fontSize:12 }}>{new Date(s.created_at).toLocaleDateString()}</td>
+                              <td>
+                                <div style={{ display:'flex', gap:4 }}>
+                                  <button className="admin-action-btn info" onClick={() => handleEditStaffClick(s)} title="Edit Staff Access"><Edit2 size={12}/></button>
+                                  <button
+                                    className="admin-action-btn danger"
+                                    onClick={() => handleDeleteStaff(s.id)}
+                                    disabled={s.id === user?.id}
+                                    style={{ opacity: s.id === user?.id ? 0.5 : 1, cursor: s.id === user?.id ? 'not-allowed' : 'pointer' }}
+                                    title={s.id === user?.id ? "You cannot delete yourself" : "Delete Staff"}
+                                  >
+                                    <Trash2 size={12}/>
+                                  </button>
+                                </div>
+                              </td>
                             </tr>
                           ))}
-                          {staffList.length===0 && <tr><td colSpan={5} style={{ textAlign:'center', padding:30, color:'var(--color-text-muted)' }}>No staff</td></tr>}
+                          {staffList.length===0 && <tr><td colSpan={6} style={{ textAlign:'center', padding:30, color:'var(--color-text-muted)' }}>No staff</td></tr>}
                         </tbody>
                       </table>
                     </div>
@@ -2171,11 +2229,14 @@ export default function AdminPage() {
       </Modal>
 
       {/* Staff Modal */}
-      <Modal open={staffModal} onClose={() => setStaffModal(false)} title="Add Staff Member">
+      <Modal open={staffModal} onClose={() => setStaffModal(false)} title={editingStaff ? "Edit Staff Member" : "Add Staff Member"}>
         <div style={{ display:'grid', gap:14 }}>
           <div className="form-group"><label className="form-label">Full Name *</label><input className="form-input" value={staffForm.name} onChange={e=>setStaffForm({...staffForm,name:e.target.value})}/></div>
           <div className="form-group"><label className="form-label">Email *</label><input className="form-input" type="email" value={staffForm.email} onChange={e=>setStaffForm({...staffForm,email:e.target.value})}/></div>
-          <div className="form-group"><label className="form-label">Password *</label><input className="form-input" type="password" value={staffForm.password} onChange={e=>setStaffForm({...staffForm,password:e.target.value})}/></div>
+          <div className="form-group">
+            <label className="form-label">{editingStaff ? "Password (Leave blank to keep current)" : "Password *"}</label>
+            <input className="form-input" type="password" value={staffForm.password} onChange={e=>setStaffForm({...staffForm,password:e.target.value})}/>
+          </div>
           <div className="form-group"><label className="form-label">Role</label>
             <select className="form-input form-select" value={staffForm.sub_role} onChange={e=>setStaffForm({...staffForm,sub_role:e.target.value})}>
               <option value="manager">Manager — Full access</option>
@@ -2183,10 +2244,20 @@ export default function AdminPage() {
               <option value="viewer">Viewer — Read only</option>
             </select>
           </div>
+          {editingStaff && (
+            <div className="form-group"><label className="form-label">Status</label>
+              <select className="form-input form-select" value={staffForm.status} onChange={e=>setStaffForm({...staffForm,status:e.target.value})}>
+                <option value="active">Active</option>
+                <option value="suspended">Suspended</option>
+              </select>
+            </div>
+          )}
         </div>
         <div style={{ marginTop:20, display:'flex', gap:12, justifyContent:'flex-end' }}>
           <button className="btn btn-ghost" onClick={() => setStaffModal(false)}>Cancel</button>
-          <button className="btn btn-primary" onClick={handleCreateStaff}><UserPlus size={16}/> Create Staff</button>
+          <button className="btn btn-primary" onClick={handleSaveStaff}>
+            {editingStaff ? <Save size={16}/> : <UserPlus size={16}/>} {editingStaff ? "Save Changes" : "Create Staff"}
+          </button>
         </div>
       </Modal>
 
