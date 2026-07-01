@@ -1533,7 +1533,7 @@ export default function ClientPortalPage() {
           .portal-sidebar { position:fixed; left:-100%; top:var(--nav-height); bottom:0; z-index:var(--z-modal); transition:left 0.3s ease; width:260px; box-shadow:var(--shadow-2xl); }
           .portal-sidebar.open { left:0; }
           .portal-overlay { display:block; position:fixed; inset:0; background:rgba(0,0,0,0.4); z-index:calc(var(--z-modal) - 1); }
-          main { padding:16px !important; }
+          main { padding:16px 16px 140px 16px !important; }
         }
       `}</style>
     </div>
