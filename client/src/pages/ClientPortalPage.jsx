@@ -1486,7 +1486,7 @@ export default function ClientPortalPage() {
       <style>{`
         @keyframes spin { 0%{transform:rotate(0deg)} 100%{transform:rotate(360deg)} }
         .portal-spinner { width:36px; height:36px; border:3px solid var(--color-border); border-top:3px solid var(--color-secondary); border-radius:50%; animation:spin 1s linear infinite; margin:0 auto; }
-        .portal-mobile-toggle { display:none; position:fixed; bottom:20px; right:20px; z-index:var(--z-widget); background:var(--color-secondary); color:white; border:none; border-radius:var(--radius-full); padding:12px 20px; font-weight:600; font-size:13px; box-shadow:var(--shadow-lg); cursor:pointer; gap:8px; align-items:center; }
+        .portal-mobile-toggle { display:none; position:fixed; bottom:20px; left:20px; right:auto; z-index:var(--z-widget); background:var(--color-secondary); color:white; border:none; border-radius:var(--radius-full); padding:12px 20px; font-weight:600; font-size:13px; box-shadow:var(--shadow-lg); cursor:pointer; gap:8px; align-items:center; }
         .portal-sidebar { width:240px; background:var(--color-surface); border-right:1px solid var(--color-border); min-height:calc(100vh - var(--nav-height)); position:sticky; top:var(--nav-height); flex-shrink:0; overflow-y:auto; max-height:calc(100vh - var(--nav-height)); }
         .portal-user-card { padding:20px 16px; text-align:center; border-bottom:1px solid var(--color-border); }
         .portal-avatar { width:48px; height:48px; border-radius:50%; background:linear-gradient(135deg,#0ea5e9,#06b6d4); color:white; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:18px; margin:0 auto 8px; }

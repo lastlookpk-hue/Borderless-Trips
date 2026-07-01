@@ -163,6 +163,7 @@ export default function AIChatWidget() {
   const [saveForm, setSaveForm] = useState({ name: '', email: '', phone: '' });
   const [saveStatus, setSaveStatus] = useState('idle'); // idle, form, loading, success
   const [saveResultData, setSaveResultData] = useState(null);
+  const [expandedForm, setExpandedForm] = useState(null); // null, 'packages', 'flights', 'agent'
   
   const [serviceForm, setServiceForm] = useState(() => {
     const saved = sessionStorage.getItem('bt_chat_service_form');
@@ -373,6 +374,7 @@ export default function AIChatWidget() {
     setServiceForm({ name: '', email: '', phone: '', country: '', nationality: '', notes: '' });
     setServiceSaveStatus('idle');
     setServiceSaveData(null);
+    setExpandedForm(null);
     sessionStorage.clear();
     addMessage("👋 Welcome back! How can I help you today?");
   };
@@ -577,64 +579,119 @@ export default function AIChatWidget() {
                     {msg.extra?.type === 'service_form' && (
                       <div className="ai-chat-result" style={{ textAlign: 'left', marginTop: 12 }}>
                         {serviceSaveStatus === 'idle' && (
-                          <div style={{ background: 'var(--color-bg)', padding: 12, borderRadius: 8, border: '1px solid var(--color-border)' }}>
-                            <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 8, color: 'var(--color-text-title)' }}>
-                              Enquiry Details
-                            </div>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                              <input 
-                                className="form-input" 
-                                style={{ padding: '6px 10px', fontSize: 12, height: 'auto', background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 4, color: 'var(--color-text)' }} 
-                                placeholder="Full Name *" 
-                                value={serviceForm.name} 
-                                onChange={e => setServiceForm({ ...serviceForm, name: e.target.value })} 
-                              />
-                              <input 
-                                className="form-input" 
-                                style={{ padding: '6px 10px', fontSize: 12, height: 'auto', background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 4, color: 'var(--color-text)' }} 
-                                type="email" 
-                                placeholder="Email Address *" 
-                                value={serviceForm.email} 
-                                onChange={e => setServiceForm({ ...serviceForm, email: e.target.value })} 
-                              />
-                              <input 
-                                className="form-input" 
-                                style={{ padding: '6px 10px', fontSize: 12, height: 'auto', background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 4, color: 'var(--color-text)' }} 
-                                placeholder="Phone Number" 
-                                value={serviceForm.phone} 
-                                onChange={e => setServiceForm({ ...serviceForm, phone: e.target.value })} 
-                              />
-                              <input 
-                                className="form-input" 
-                                style={{ padding: '6px 10px', fontSize: 12, height: 'auto', background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 4, color: 'var(--color-text)' }} 
-                                placeholder={msg.extra.service === 'packages' ? "Destination (e.g. Paris, France)" : msg.extra.service === 'flights' ? "Route (e.g. London to Paris)" : "Topic of Interest"} 
-                                value={serviceForm.country} 
-                                onChange={e => setServiceForm({ ...serviceForm, country: e.target.value })} 
-                              />
-                              <input 
-                                className="form-input" 
-                                style={{ padding: '6px 10px', fontSize: 12, height: 'auto', background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 4, color: 'var(--color-text)' }} 
-                                placeholder="Nationality" 
-                                value={serviceForm.nationality} 
-                                onChange={e => setServiceForm({ ...serviceForm, nationality: e.target.value })} 
-                              />
-                              <textarea 
-                                className="form-input" 
-                                style={{ padding: '6px 10px', fontSize: 12, height: 'auto', background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 4, color: 'var(--color-text)', resize: 'vertical' }} 
-                                placeholder={msg.extra.service === 'packages' ? "Travel dates, travelers, budget..." : msg.extra.service === 'flights' ? "Travel dates, class, passengers..." : "Brief description of your query..."} 
-                                value={serviceForm.notes} 
-                                onChange={e => setServiceForm({ ...serviceForm, notes: e.target.value })} 
-                                rows={2}
-                              />
-                              <button 
-                                className="btn btn-primary btn-sm" 
-                                style={{ width: '100%', marginTop: 4 }}
-                                onClick={() => handleSaveServiceInquiry(msg.extra.service)}
-                                disabled={!serviceForm.name || !serviceForm.email}
+                          <div>
+                            {/* Contact Options Row */}
+                            <p className="text-muted" style={{ fontSize: 11, marginBottom: 8 }}>
+                              How would you like to request your {msg.extra.service === 'packages' ? 'holiday package' : msg.extra.service === 'flights' ? 'flights quote' : 'consultation'}?
+                            </p>
+                            
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
+                              {/* WhatsApp button */}
+                              <a 
+                                href={msg.extra.service === 'packages' 
+                                  ? `https://wa.me/441234567890?text=${encodeURIComponent("Hello Borderless Trips! I am interested in holiday packages. I would like to book a consultation.")}`
+                                  : msg.extra.service === 'flights'
+                                  ? `https://wa.me/441234567890?text=${encodeURIComponent("Hello Borderless Trips! I need flight booking assistance. Could you help me with a quote?")}`
+                                  : `https://wa.me/441234567890?text=${encodeURIComponent("Hello Borderless Trips! I would like to speak to an agent for consultation.")}`
+                                }
+                                target="_blank" 
+                                rel="noopener noreferrer" 
+                                className="btn btn-success btn-xs" 
+                                style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: '#25D366', color: 'white', border: 'none', padding: '6px 10px', fontSize: 11, textDecoration: 'none', borderRadius: 4, fontWeight: 600 }}
                               >
-                                Submit Request
+                                💬 WhatsApp
+                              </a>
+
+                              {/* Email button */}
+                              <a 
+                                href={`mailto:info@borderlesstrips.com?subject=${encodeURIComponent(msg.extra.service === 'packages' ? 'Holiday Package Enquiry' : msg.extra.service === 'flights' ? 'Flight Enquiry' : 'Consultation Request')}&body=${encodeURIComponent("Hello Borderless Trips,\n\nI would like to enquire about your services.")}`}
+                                className="btn btn-outline btn-xs" 
+                                style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '5px 9px', fontSize: 11, textDecoration: 'none', borderRadius: 4, fontWeight: 600, border: '1px solid var(--color-border)', color: 'var(--color-text)' }}
+                              >
+                                📧 Email Us
+                              </a>
+
+                              {/* Call button */}
+                              <a 
+                                href="tel:+441234567890"
+                                className="btn btn-outline btn-xs" 
+                                style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '5px 9px', fontSize: 11, textDecoration: 'none', borderRadius: 4, fontWeight: 600, border: '1px solid var(--color-border)', color: 'var(--color-text)' }}
+                              >
+                                📞 Call
+                              </a>
+
+                              {/* Form toggle button */}
+                              <button 
+                                onClick={() => setExpandedForm(expandedForm === msg.extra.service ? null : msg.extra.service)} 
+                                className="btn btn-primary btn-xs" 
+                                style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '5px 9px', fontSize: 11, borderRadius: 4, fontWeight: 600 }}
+                              >
+                                📝 {expandedForm === msg.extra.service ? 'Hide Form' : 'Fill Form'}
                               </button>
                             </div>
+
+                            {/* Collapsible Form */}
+                            {expandedForm === msg.extra.service && (
+                              <div style={{ background: 'var(--color-bg)', padding: 12, borderRadius: 8, border: '1px solid var(--color-border)', marginTop: 8 }}>
+                                <div style={{ fontSize: 11, fontWeight: 700, marginBottom: 8, color: 'var(--color-text-title)' }}>
+                                  Fill Enquiry Form
+                                </div>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                                  <input 
+                                    className="form-input" 
+                                    style={{ padding: '6px 10px', fontSize: 12, height: 'auto', background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 4, color: 'var(--color-text)' }} 
+                                    placeholder="Full Name *" 
+                                    value={serviceForm.name} 
+                                    onChange={e => setServiceForm({ ...serviceForm, name: e.target.value })} 
+                                  />
+                                  <input 
+                                    className="form-input" 
+                                    style={{ padding: '6px 10px', fontSize: 12, height: 'auto', background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 4, color: 'var(--color-text)' }} 
+                                    type="email" 
+                                    placeholder="Email Address *" 
+                                    value={serviceForm.email} 
+                                    onChange={e => setServiceForm({ ...serviceForm, email: e.target.value })} 
+                                  />
+                                  <input 
+                                    className="form-input" 
+                                    style={{ padding: '6px 10px', fontSize: 12, height: 'auto', background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 4, color: 'var(--color-text)' }} 
+                                    placeholder="Phone Number" 
+                                    value={serviceForm.phone} 
+                                    onChange={e => setServiceForm({ ...serviceForm, phone: e.target.value })} 
+                                  />
+                                  <input 
+                                    className="form-input" 
+                                    style={{ padding: '6px 10px', fontSize: 12, height: 'auto', background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 4, color: 'var(--color-text)' }} 
+                                    placeholder={msg.extra.service === 'packages' ? "Destination (e.g. Paris, France)" : msg.extra.service === 'flights' ? "Route (e.g. London to Paris)" : "Topic of Interest"} 
+                                    value={serviceForm.country} 
+                                    onChange={e => setServiceForm({ ...serviceForm, country: e.target.value })} 
+                                  />
+                                  <input 
+                                    className="form-input" 
+                                    style={{ padding: '6px 10px', fontSize: 12, height: 'auto', background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 4, color: 'var(--color-text)' }} 
+                                    placeholder="Nationality" 
+                                    value={serviceForm.nationality} 
+                                    onChange={e => setServiceForm({ ...serviceForm, nationality: e.target.value })} 
+                                  />
+                                  <textarea 
+                                    className="form-input" 
+                                    style={{ padding: '6px 10px', fontSize: 12, height: 'auto', background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 4, color: 'var(--color-text)', resize: 'vertical' }} 
+                                    placeholder={msg.extra.service === 'packages' ? "Travel dates, travelers, budget..." : msg.extra.service === 'flights' ? "Travel dates, class, passengers..." : "Brief description of your query..."} 
+                                    value={serviceForm.notes} 
+                                    onChange={e => setServiceForm({ ...serviceForm, notes: e.target.value })} 
+                                    rows={2}
+                                  />
+                                  <button 
+                                    className="btn btn-primary btn-sm" 
+                                    style={{ width: '100%', marginTop: 4 }}
+                                    onClick={() => handleSaveServiceInquiry(msg.extra.service)}
+                                    disabled={!serviceForm.name || !serviceForm.email}
+                                  >
+                                    Submit Request
+                                  </button>
+                                </div>
+                              </div>
+                            )}
                           </div>
                         )}
 
