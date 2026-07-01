@@ -147,6 +147,9 @@ export default function AIChatWidget() {
   const [currentQ, setCurrentQ] = useState(0);
   const [answers, setAnswers] = useState({});
   const [result, setResult] = useState(null);
+  const [saveForm, setSaveForm] = useState({ name: '', email: '', phone: '' });
+  const [saveStatus, setSaveStatus] = useState('idle'); // idle, form, loading, success
+  const [saveResultData, setSaveResultData] = useState(null);
   const chatEndRef = useRef(null);
 
   useEffect(() => {
@@ -212,6 +215,43 @@ export default function AIChatWidget() {
       }, 800);
     }
   };
+  
+  const handleSaveInquiry = async (evalResult) => {
+    setSaveStatus('loading');
+    try {
+      const response = await fetch('/api/inquiries/evaluate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: saveForm.name,
+          email: saveForm.email,
+          phone: saveForm.phone,
+          country: answers.destination || 'Schengen',
+          nationality: answers.nationality || '',
+          purpose: answers.purpose || '',
+          employed: answers.employment || '',
+          funds: answers.financial || '',
+          history: answers.travel_history || '',
+          rejection: answers.previous_rejection || '',
+        })
+      });
+      
+      const data = await response.json();
+      if (response.ok) {
+        setSaveResultData(data);
+        setSaveStatus('success');
+      } else {
+        alert(data.error || 'Failed to save assessment.');
+        setSaveStatus('form');
+      }
+    } catch (e) {
+      console.error(e);
+      alert('Network error. Failed to save assessment.');
+      setSaveStatus('form');
+    }
+  };
 
   const handleReset = () => {
     setMessages([]);
@@ -219,6 +259,9 @@ export default function AIChatWidget() {
     setCurrentQ(0);
     setAnswers({});
     setResult(null);
+    setSaveForm({ name: '', email: '', phone: '' });
+    setSaveStatus('idle');
+    setSaveResultData(null);
     addMessage("👋 Welcome back! How can I help you today?");
   };
 
@@ -315,9 +358,109 @@ export default function AIChatWidget() {
                           ))}
                         </div>
 
-                        <a href="/contact" className="btn btn-primary btn-sm" style={{ width: '100%', marginTop: '12px' }}>
-                          Book Free Consultation
-                        </a>
+                        {saveStatus === 'idle' && (
+                          <button 
+                            onClick={() => setSaveStatus('form')} 
+                            className="btn btn-primary btn-sm" 
+                            style={{ width: '100%', marginTop: '12px' }}
+                          >
+                            Book Free Consultation
+                          </button>
+                        )}
+
+                        {saveStatus === 'form' && (
+                          <div style={{ marginTop: 12, background: 'var(--color-bg)', padding: 12, borderRadius: 8, border: '1px solid var(--color-border)' }}>
+                            <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 8, color: 'var(--color-text-title)' }}>
+                              Save Assessment & Request Call
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                              <input 
+                                className="form-input" 
+                                style={{ padding: '6px 10px', fontSize: 12, height: 'auto', background: 'var(--color-surface)' }} 
+                                placeholder="Full Name *" 
+                                value={saveForm.name} 
+                                onChange={e => setSaveForm({ ...saveForm, name: e.target.value })} 
+                              />
+                              <input 
+                                className="form-input" 
+                                style={{ padding: '6px 10px', fontSize: 12, height: 'auto', background: 'var(--color-surface)' }} 
+                                type="email" 
+                                placeholder="Email Address *" 
+                                value={saveForm.email} 
+                                onChange={e => setSaveForm({ ...saveForm, email: e.target.value })} 
+                              />
+                              <input 
+                                className="form-input" 
+                                style={{ padding: '6px 10px', fontSize: 12, height: 'auto', background: 'var(--color-surface)' }} 
+                                placeholder="Phone Number" 
+                                value={saveForm.phone} 
+                                onChange={e => setSaveForm({ ...saveForm, phone: e.target.value })} 
+                              />
+                              <button 
+                                className="btn btn-secondary btn-sm" 
+                                style={{ width: '100%', marginTop: 4 }}
+                                onClick={() => handleSaveInquiry(msg.extra.result)}
+                                disabled={!saveForm.name || !saveForm.email}
+                              >
+                                Submit Assessment
+                              </button>
+                            </div>
+                          </div>
+                        )}
+
+                        {saveStatus === 'loading' && (
+                          <div style={{ marginTop: 12, textAlign: 'center', fontSize: 12, color: 'var(--color-text-muted)' }}>
+                            Saving assessment and creating portal account...
+                          </div>
+                        )}
+
+                        {saveStatus === 'success' && saveResultData && (
+                          <div style={{ marginTop: 12, background: 'rgba(16, 185, 129, 0.05)', border: '1px solid rgba(16, 185, 129, 0.2)', padding: 12, borderRadius: 8, fontSize: 12, textAlign: 'left' }}>
+                            <p style={{ color: '#10b981', fontWeight: 700, margin: '0 0 6px 0', display: 'flex', alignItems: 'center', gap: 4 }}>
+                              <CheckCircle2 size={14} /> Assessment Saved Successfully!
+                            </p>
+                            <p className="text-muted" style={{ margin: '0 0 10px 0', fontSize: 11, lineHeight: 1.4 }}>
+                              An agent has been notified. 
+                              {saveResultData.autoCreated ? ' We have automatically created a portal account for you to track your application:' : ' Please log in to your portal to view this evaluation.'}
+                            </p>
+                            
+                            {saveResultData.autoCreated && (
+                              <div style={{ background: 'var(--color-bg)', padding: 8, borderRadius: 6, marginBottom: 12, fontSize: 11 }}>
+                                <div><strong>Email:</strong> {saveForm.email.toLowerCase()}</div>
+                                <div><strong>Password:</strong> <code style={{ background: 'var(--color-surface)', padding: '1px 4px', borderRadius: 2 }}>welcome123</code></div>
+                              </div>
+                            )}
+
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                              {/* WhatsApp Button */}
+                              <a 
+                                href={`https://wa.me/441234567890?text=${encodeURIComponent(`Hello! My Schengen visa eligibility score is ${msg.extra.result.score}% (${msg.extra.result.level} eligibility). I just submitted my profile under email ${saveForm.email} and would like to proceed with a consultation.`)}`}
+                                target="_blank" 
+                                rel="noopener noreferrer" 
+                                className="btn btn-success btn-sm" 
+                                style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, background: '#25D366', color: 'white', border: 'none', padding: '6px 12px', fontSize: 12, fontWeight: 600, textDecoration: 'none', borderRadius: 'var(--radius-md)' }}
+                              >
+                                💬 WhatsApp Consultation
+                              </a>
+                              
+                              {/* Proceed to Portal */}
+                              <button 
+                                className="btn btn-primary btn-sm" 
+                                style={{ width: '100%', padding: '6px 12px', fontSize: 12, fontWeight: 600 }}
+                                onClick={() => {
+                                  if (saveResultData.token) {
+                                    localStorage.setItem('token', saveResultData.token);
+                                    window.location.href = '/portal';
+                                  } else {
+                                    window.location.href = '/login';
+                                  }
+                                }}
+                              >
+                                ⚡ Go to My Portal
+                              </button>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>

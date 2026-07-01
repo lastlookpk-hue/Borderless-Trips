@@ -102,9 +102,33 @@ export default function ContactPage() {
                       <label className="form-label">Message</label>
                       <textarea className="form-input form-textarea" placeholder="Tell us how we can help..." required value={form.message} onChange={e=>setForm({...form,message:e.target.value})} rows={5} />
                     </div>
-                    <button type="submit" className="btn btn-primary btn-lg" style={{ width:'100%' }}>
-                      <Send size={18}/> Send Message
-                    </button>
+                    <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+                      <button type="submit" className="btn btn-primary btn-lg" style={{ flex: '1 1 200px' }}>
+                        <Send size={18}/> Send Message
+                      </button>
+                      <a 
+                        href={`https://wa.me/441234567890?text=${encodeURIComponent(`Hello Borderless Trips! I would like to book a consultation about ${form.subject === 'general' ? 'general travel enquiry' : form.subject + ' services'}. My name is ${form.name || 'Guest'}.`)}`}
+                        target="_blank" 
+                        rel="noopener noreferrer" 
+                        className="btn btn-success btn-lg" 
+                        style={{ 
+                          flex: '1 1 200px', 
+                          display: 'inline-flex', 
+                          alignItems: 'center', 
+                          justifyContent: 'center', 
+                          gap: 8, 
+                          background: '#25D366', 
+                          color: 'white', 
+                          border: 'none', 
+                          textDecoration: 'none', 
+                          padding: '12px 24px',
+                          borderRadius: 'var(--radius-lg)',
+                          fontWeight: 600
+                        }}
+                      >
+                        <MessageSquare size={18}/> WhatsApp Consultation
+                      </a>
+                    </div>
                   </form>
                 ) : (
                   <div className="card text-center" style={{ padding:'var(--space-10)' }}>
