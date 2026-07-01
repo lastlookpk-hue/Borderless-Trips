@@ -3262,7 +3262,7 @@ export default function AdminPage() {
       <style>{`
         @keyframes spin { 0%{transform:rotate(0deg)} 100%{transform:rotate(360deg)} }
         .spinner { width:36px; height:36px; border:3px solid var(--color-border); border-top:3px solid var(--color-secondary); border-radius:50%; animation:spin 1s linear infinite; margin:0 auto; }
-        .admin-mobile-toggle { display:none; position:fixed; bottom:20px; right:20px; z-index:var(--z-widget); background:var(--color-primary); color:white; border:none; border-radius:var(--radius-full); padding:12px 20px; font-weight:600; font-size:13px; box-shadow:var(--shadow-lg); cursor:pointer; gap:8px; align-items:center; }
+        .admin-mobile-toggle { display:none; position:fixed; bottom:20px; left:20px; right:auto; z-index:var(--z-widget); background:var(--color-primary); color:white; border:none; border-radius:var(--radius-full); padding:12px 20px; font-weight:600; font-size:13px; box-shadow:var(--shadow-lg); cursor:pointer; gap:8px; align-items:center; }
         .admin-sidebar { width:220px; background:var(--color-primary); min-height:calc(100vh - var(--nav-height)); position:sticky; top:var(--nav-height); flex-shrink:0; padding:20px 12px; overflow-y:auto; max-height:calc(100vh - var(--nav-height)); }
         .admin-sidebar-header { color:white; font-weight:700; font-size:16px; padding:0 12px; margin-bottom:20px; }
         .admin-nav { display:flex; flex-direction:column; gap:1px; }

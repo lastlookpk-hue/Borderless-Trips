@@ -223,7 +223,7 @@ export default function AIChatWidget() {
   };
 
   return (
-    <div className="ai-chat-widget" id="ai-chat-widget">
+    <div className="ai-chat-widget" id="ai-chat-widget" style={{ zIndex: isOpen ? 100000 : 'var(--z-widget)' }}>
       <AnimatePresence>
         {isOpen && (
           <motion.div
