@@ -204,12 +204,9 @@ export default function ServiceRequestPage() {
   };
 
   const handleProceedToPortal = () => {
-    if (result?.token) {
-      localStorage.setItem('bt_token', result.token);
-      window.location.href = '/portal';
-    } else {
-      navigate('/login');
-    }
+    const emailParam = encodeURIComponent(formData.email);
+    const passParam = result?.tempPassword ? encodeURIComponent(result.tempPassword) : '';
+    window.location.href = `/login?email=${emailParam}&password=${passParam}`;
   };
 
   const serviceTypes = [

@@ -142,15 +142,83 @@ const QUICK_ACTIONS = [
 
 export default function AIChatWidget() {
   const [isOpen, setIsOpen] = useState(false);
-  const [messages, setMessages] = useState([]);
-  const [mode, setMode] = useState('menu');
-  const [currentQ, setCurrentQ] = useState(0);
-  const [answers, setAnswers] = useState({});
-  const [result, setResult] = useState(null);
+  const [messages, setMessages] = useState(() => {
+    const saved = sessionStorage.getItem('bt_chat_messages');
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [mode, setMode] = useState(() => sessionStorage.getItem('bt_chat_mode') || 'menu');
+  const [currentQ, setCurrentQ] = useState(() => {
+    const saved = sessionStorage.getItem('bt_chat_current_q');
+    return saved ? parseInt(saved) : 0;
+  });
+  const [answers, setAnswers] = useState(() => {
+    const saved = sessionStorage.getItem('bt_chat_answers');
+    return saved ? JSON.parse(saved) : {};
+  });
+  const [result, setResult] = useState(() => {
+    const saved = sessionStorage.getItem('bt_chat_result');
+    return saved ? JSON.parse(saved) : null;
+  });
+  const [inquiryType, setInquiryType] = useState(() => sessionStorage.getItem('bt_chat_inquiry_type') || 'visa');
   const [saveForm, setSaveForm] = useState({ name: '', email: '', phone: '' });
   const [saveStatus, setSaveStatus] = useState('idle'); // idle, form, loading, success
   const [saveResultData, setSaveResultData] = useState(null);
+  
+  const [serviceForm, setServiceForm] = useState(() => {
+    const saved = sessionStorage.getItem('bt_chat_service_form');
+    return saved ? JSON.parse(saved) : { name: '', email: '', phone: '', country: '', nationality: '', notes: '' };
+  });
+  const [serviceSaveStatus, setServiceSaveStatus] = useState(() => sessionStorage.getItem('bt_chat_service_save_status') || 'idle');
+  const [serviceSaveData, setServiceSaveData] = useState(() => {
+    const saved = sessionStorage.getItem('bt_chat_service_save_data');
+    return saved ? JSON.parse(saved) : null;
+  });
+
   const chatEndRef = useRef(null);
+
+  useEffect(() => {
+    sessionStorage.setItem('bt_chat_messages', JSON.stringify(messages));
+  }, [messages]);
+
+  useEffect(() => {
+    sessionStorage.setItem('bt_chat_mode', mode);
+  }, [mode]);
+
+  useEffect(() => {
+    sessionStorage.setItem('bt_chat_answers', JSON.stringify(answers));
+  }, [answers]);
+
+  useEffect(() => {
+    sessionStorage.setItem('bt_chat_current_q', currentQ.toString());
+  }, [currentQ]);
+
+  useEffect(() => {
+    if (result) {
+      sessionStorage.setItem('bt_chat_result', JSON.stringify(result));
+    } else {
+      sessionStorage.removeItem('bt_chat_result');
+    }
+  }, [result]);
+
+  useEffect(() => {
+    sessionStorage.setItem('bt_chat_inquiry_type', inquiryType);
+  }, [inquiryType]);
+
+  useEffect(() => {
+    sessionStorage.setItem('bt_chat_service_form', JSON.stringify(serviceForm));
+  }, [serviceForm]);
+
+  useEffect(() => {
+    sessionStorage.setItem('bt_chat_service_save_status', serviceSaveStatus);
+  }, [serviceSaveStatus]);
+
+  useEffect(() => {
+    if (serviceSaveData) {
+      sessionStorage.setItem('bt_chat_service_save_data', JSON.stringify(serviceSaveData));
+    } else {
+      sessionStorage.removeItem('bt_chat_service_save_data');
+    }
+  }, [serviceSaveData]);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -180,16 +248,19 @@ export default function AIChatWidget() {
       }, 500);
     } else if (action === 'packages') {
       addMessage("I'm interested in holiday packages", 'user');
-      addMessage("Wonderful! 🌴 We have amazing packages across Europe and beyond. Visit our Holiday Packages page to explore our curated collection, or tell me your preferred destination and budget!", 'bot');
-      setMode('menu');
+      addMessage("Wonderful! 🌴 I can help you request a custom holiday package. Please fill out the short request form below so our travel planners can design an itinerary for you!", 'bot', { type: 'service_form', service: 'packages' });
+      setInquiryType('holiday_package');
+      setMode('service_inquiry');
     } else if (action === 'flights') {
       addMessage("I need help with flight bookings", 'user');
-      addMessage("✈️ We can find you the best flight deals! Please visit our Flights page to submit an enquiry, or message us on WhatsApp for a quick quote.", 'bot');
-      setMode('menu');
+      addMessage("✈️ Let's get your flight route and details. Fill in the short request below and we will prepare quotes for you.", 'bot', { type: 'service_form', service: 'flights' });
+      setInquiryType('flight');
+      setMode('service_inquiry');
     } else if (action === 'agent') {
       addMessage("I'd like to speak to a human agent", 'user');
-      addMessage("Of course! 🤝 You can reach us via:\n\n📞 Phone: +44 123 456 7890\n💬 WhatsApp: Click the green button\n📧 Email: info@borderlesstrips.com\n\nOur team is available Mon-Sat, 9AM-6PM GMT.", 'bot');
-      setMode('menu');
+      addMessage("No problem! Let's book a consultation. Please fill in your contact information below and an agent will call you back shortly.", 'bot', { type: 'service_form', service: 'agent' });
+      setInquiryType('consultation');
+      setMode('service_inquiry');
     }
   };
 
@@ -253,6 +324,43 @@ export default function AIChatWidget() {
     }
   };
 
+  const handleSaveServiceInquiry = async (type) => {
+    setServiceSaveStatus('loading');
+    try {
+      const response = await fetch('/api/inquiries/evaluate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: serviceForm.name,
+          email: serviceForm.email,
+          phone: serviceForm.phone,
+          country: serviceForm.country || 'Any',
+          nationality: serviceForm.nationality || 'Any',
+          purpose: type === 'packages' ? 'Holiday Package' : type === 'flights' ? 'Flight Booking' : 'Agent Consultation',
+          employed: serviceForm.notes,
+          funds: 'Yes',
+          history: 'No',
+          rejection: 'No'
+        })
+      });
+
+      const data = await response.json();
+      if (response.ok) {
+        setServiceSaveData(data);
+        setServiceSaveStatus('success');
+      } else {
+        alert(data.error || 'Failed to save inquiry.');
+        setServiceSaveStatus('idle');
+      }
+    } catch (e) {
+      console.error(e);
+      alert('Network error. Failed to save inquiry.');
+      setServiceSaveStatus('idle');
+    }
+  };
+
   const handleReset = () => {
     setMessages([]);
     setMode('menu');
@@ -262,6 +370,10 @@ export default function AIChatWidget() {
     setSaveForm({ name: '', email: '', phone: '' });
     setSaveStatus('idle');
     setSaveResultData(null);
+    setServiceForm({ name: '', email: '', phone: '', country: '', nationality: '', notes: '' });
+    setServiceSaveStatus('idle');
+    setServiceSaveData(null);
+    sessionStorage.clear();
     addMessage("👋 Welcome back! How can I help you today?");
   };
 
@@ -448,15 +560,128 @@ export default function AIChatWidget() {
                                 className="btn btn-primary btn-sm" 
                                 style={{ width: '100%', padding: '6px 12px', fontSize: 12, fontWeight: 600 }}
                                 onClick={() => {
-                                  if (saveResultData.token) {
-                                    localStorage.setItem('token', saveResultData.token);
-                                    window.location.href = '/portal';
-                                  } else {
-                                    window.location.href = '/login';
-                                  }
+                                  const emailParam = encodeURIComponent(saveForm.email);
+                                  const passParam = saveResultData.autoCreated ? 'welcome123' : '';
+                                  window.location.href = `/login?email=${emailParam}&password=${passParam}`;
                                 }}
                               >
-                                ⚡ Go to My Portal
+                                ⚡ Go to My Portal (Login)
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Service Enquiry Form */}
+                    {msg.extra?.type === 'service_form' && (
+                      <div className="ai-chat-result" style={{ textAlign: 'left', marginTop: 12 }}>
+                        {serviceSaveStatus === 'idle' && (
+                          <div style={{ background: 'var(--color-bg)', padding: 12, borderRadius: 8, border: '1px solid var(--color-border)' }}>
+                            <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 8, color: 'var(--color-text-title)' }}>
+                              Enquiry Details
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                              <input 
+                                className="form-input" 
+                                style={{ padding: '6px 10px', fontSize: 12, height: 'auto', background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 4, color: 'var(--color-text)' }} 
+                                placeholder="Full Name *" 
+                                value={serviceForm.name} 
+                                onChange={e => setServiceForm({ ...serviceForm, name: e.target.value })} 
+                              />
+                              <input 
+                                className="form-input" 
+                                style={{ padding: '6px 10px', fontSize: 12, height: 'auto', background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 4, color: 'var(--color-text)' }} 
+                                type="email" 
+                                placeholder="Email Address *" 
+                                value={serviceForm.email} 
+                                onChange={e => setServiceForm({ ...serviceForm, email: e.target.value })} 
+                              />
+                              <input 
+                                className="form-input" 
+                                style={{ padding: '6px 10px', fontSize: 12, height: 'auto', background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 4, color: 'var(--color-text)' }} 
+                                placeholder="Phone Number" 
+                                value={serviceForm.phone} 
+                                onChange={e => setServiceForm({ ...serviceForm, phone: e.target.value })} 
+                              />
+                              <input 
+                                className="form-input" 
+                                style={{ padding: '6px 10px', fontSize: 12, height: 'auto', background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 4, color: 'var(--color-text)' }} 
+                                placeholder={msg.extra.service === 'packages' ? "Destination (e.g. Paris, France)" : msg.extra.service === 'flights' ? "Route (e.g. London to Paris)" : "Topic of Interest"} 
+                                value={serviceForm.country} 
+                                onChange={e => setServiceForm({ ...serviceForm, country: e.target.value })} 
+                              />
+                              <input 
+                                className="form-input" 
+                                style={{ padding: '6px 10px', fontSize: 12, height: 'auto', background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 4, color: 'var(--color-text)' }} 
+                                placeholder="Nationality" 
+                                value={serviceForm.nationality} 
+                                onChange={e => setServiceForm({ ...serviceForm, nationality: e.target.value })} 
+                              />
+                              <textarea 
+                                className="form-input" 
+                                style={{ padding: '6px 10px', fontSize: 12, height: 'auto', background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 4, color: 'var(--color-text)', resize: 'vertical' }} 
+                                placeholder={msg.extra.service === 'packages' ? "Travel dates, travelers, budget..." : msg.extra.service === 'flights' ? "Travel dates, class, passengers..." : "Brief description of your query..."} 
+                                value={serviceForm.notes} 
+                                onChange={e => setServiceForm({ ...serviceForm, notes: e.target.value })} 
+                                rows={2}
+                              />
+                              <button 
+                                className="btn btn-primary btn-sm" 
+                                style={{ width: '100%', marginTop: 4 }}
+                                onClick={() => handleSaveServiceInquiry(msg.extra.service)}
+                                disabled={!serviceForm.name || !serviceForm.email}
+                              >
+                                Submit Request
+                              </button>
+                            </div>
+                          </div>
+                        )}
+
+                        {serviceSaveStatus === 'loading' && (
+                          <div style={{ textAlign: 'center', fontSize: 12, color: 'var(--color-text-muted)', padding: 12 }}>
+                            Submitting request and creating account...
+                          </div>
+                        )}
+
+                        {serviceSaveStatus === 'success' && serviceSaveData && (
+                          <div style={{ background: 'rgba(16, 185, 129, 0.05)', border: '1px solid rgba(16, 185, 129, 0.2)', padding: 12, borderRadius: 8, fontSize: 12 }}>
+                            <p style={{ color: '#10b981', fontWeight: 700, margin: '0 0 6px 0', display: 'flex', alignItems: 'center', gap: 4 }}>
+                              <CheckCircle2 size={14} /> Request Submitted!
+                            </p>
+                            <p className="text-muted" style={{ margin: '0 0 10px 0', fontSize: 11, lineHeight: 1.4 }}>
+                              An agent will contact you shortly. 
+                              {serviceSaveData.autoCreated ? ' We have automatically created a portal account for you:' : ' Please log in to your portal to track updates.'}
+                            </p>
+                            
+                            {serviceSaveData.autoCreated && (
+                              <div style={{ background: 'var(--color-bg)', padding: 8, borderRadius: 6, marginBottom: 12, fontSize: 11 }}>
+                                <div><strong>Email:</strong> {serviceForm.email.toLowerCase()}</div>
+                                <div><strong>Password:</strong> <code style={{ background: 'var(--color-surface)', padding: '1px 4px', borderRadius: 2 }}>welcome123</code></div>
+                              </div>
+                            )}
+
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                              <a 
+                                href={`https://wa.me/441234567890?text=${encodeURIComponent(`Hello! I just submitted a ${msg.extra.service === 'packages' ? 'Holiday Package' : msg.extra.service === 'flights' ? 'Flight Booking' : 'Consultation'} request under email ${serviceForm.email}. I would like to proceed with a consultation.`)}`}
+                                target="_blank" 
+                                rel="noopener noreferrer" 
+                                className="btn btn-success btn-sm" 
+                                style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, background: '#25D366', color: 'white', border: 'none', padding: '6px 12px', fontSize: 12, fontWeight: 600, textDecoration: 'none', borderRadius: 'var(--radius-md)' }}
+                              >
+                                💬 WhatsApp Consultation
+                              </a>
+                              
+                              <button 
+                                className="btn btn-primary btn-sm" 
+                                style={{ width: '100%', padding: '6px 12px', fontSize: 12, fontWeight: 600 }}
+                                onClick={() => {
+                                  const emailParam = encodeURIComponent(serviceForm.email);
+                                  const passParam = serviceSaveData.autoCreated ? 'welcome123' : '';
+                                  window.location.href = `/login?email=${emailParam}&password=${passParam}`;
+                                }}
+                              >
+                                ⚡ Go to My Portal (Login)
                               </button>
                             </div>
                           </div>

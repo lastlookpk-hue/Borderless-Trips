@@ -5,7 +5,13 @@ import { Mail, Lock, User, Phone, Globe, Eye, EyeOff, ArrowRight } from 'lucide-
 import { useAuth } from '../context/AuthContext';
 
 export function LoginPage() {
-  const [form, setForm] = useState({ email:'', password:'' });
+  const [form, setForm] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    return {
+      email: params.get('email') || '',
+      password: params.get('password') || ''
+    };
+  });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPw, setShowPw] = useState(false);
