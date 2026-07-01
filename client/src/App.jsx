@@ -25,6 +25,9 @@ const ClientPortalPage = lazy(() => import('./pages/ClientPortalPage'));
 const AdminPage = lazy(() => import('./pages/AdminPage'));
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 const ServiceRequestPage = lazy(() => import('./pages/ServiceRequestPage'));
+const RefundPage = lazy(() => import('./pages/RefundPage'));
+const TermsPage = lazy(() => import('./pages/TermsPage'));
+const PrivacyPage = lazy(() => import('./pages/PrivacyPage'));
 
 // Auth pages
 const AuthPagesImport = () => import('./pages/AuthPages');
@@ -89,6 +92,9 @@ function AppLayout() {
             <Route path="/portal" element={<ClientPortalPage />} />
             <Route path="/admin" element={<AdminPage />} />
             <Route path="/request-service" element={<ServiceRequestPage />} />
+            <Route path="/refund-policy" element={<RefundPage />} />
+            <Route path="/terms-of-service" element={<TermsPage />} />
+            <Route path="/privacy-policy" element={<PrivacyPage />} />
             <Route path="*" element={<NotFoundPage />} />
           </Routes>
         </Suspense>

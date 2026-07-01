@@ -147,8 +147,9 @@ export default function Footer() {
         <div className="container footer-bottom-inner">
           <p>© {new Date().getFullYear()} Borderless Trips. All rights reserved.</p>
           <div className="footer-legal">
-            <Link to="/privacy">Privacy Policy</Link>
-            <Link to="/terms">Terms of Service</Link>
+            <Link to="/privacy-policy">Privacy Policy</Link>
+            <Link to="/terms-of-service">Terms of Service</Link>
+            <Link to="/refund-policy">Refund Policy</Link>
           </div>
           <button className="footer-scroll-top" onClick={scrollToTop} aria-label="Scroll to top" id="scroll-top-btn">
             <ArrowUp size={18} />
