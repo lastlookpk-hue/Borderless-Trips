@@ -45,3 +45,7 @@ pnpm-debug.log*
 # OS files
 .DS_Store
 Thumbs.db
+
+# Deployment archives
+boardless_deploy.zip
+
