@@ -2,7 +2,15 @@ const Database = require('better-sqlite3');
 const path = require('path');
 const bcrypt = require('bcryptjs');
 
+const fs = require('fs');
 const dbPath = path.join(__dirname, '..', '..', 'data', 'borderless.db');
+
+// Ensure parent database directory exists
+const dbDir = path.dirname(dbPath);
+if (!fs.existsSync(dbDir)) {
+  fs.mkdirSync(dbDir, { recursive: true });
+}
+
 const db = new Database(dbPath);
 
 // Enable WAL mode for better performance
