@@ -279,6 +279,20 @@ router.put('/:id', authenticate, (req, res) => {
         }
       }
 
+      // Notify customer on status change via email
+      if (status && status !== booking.status) {
+        const { sendStatusUpdateEmail } = require('../utils/mailer');
+        sendStatusUpdateEmail({
+          email: booking.customer_email,
+          name: booking.customer_name,
+          type: 'booking',
+          ref: booking.booking_ref,
+          oldStatus: booking.status,
+          newStatus: status,
+          notes: admin_notes || ''
+        }).catch(err => console.error('Booking status email failed:', err));
+      }
+
       res.json({ message: 'Booking updated.' });
     } else {
       // Customer role updates
@@ -363,6 +377,19 @@ router.put('/:id/cancel', authenticate, (req, res) => {
     if (booking.status === 'completed') return res.status(400).json({ error: 'Cannot cancel a completed booking.' });
 
     db.prepare("UPDATE bookings SET status = 'cancelled', updated_at = CURRENT_TIMESTAMP WHERE id = ?").run(id);
+
+    // Notify client via email
+    const { sendStatusUpdateEmail } = require('../utils/mailer');
+    sendStatusUpdateEmail({
+      email: booking.customer_email,
+      name: booking.customer_name,
+      type: 'booking',
+      ref: booking.booking_ref,
+      oldStatus: booking.status,
+      newStatus: 'cancelled',
+      notes: 'Cancelled by user.'
+    }).catch(err => console.error('Booking status cancel email failed:', err));
+
     res.json({ message: 'Booking cancelled.' });
   } catch (error) {
     res.status(500).json({ error: 'Failed to cancel booking.' });

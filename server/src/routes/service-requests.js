@@ -73,6 +73,14 @@ router.post('/', (req, res) => {
 
     const request = db.prepare('SELECT * FROM service_requests WHERE ref = ?').get(ref);
     
+    // Send email notifications asynchronously
+    const { sendWelcomeEmail, sendRequestConfirmation, sendAdminAlert } = require('../utils/mailer');
+    if (autoCreated) {
+      sendWelcomeEmail({ email, name, tempPassword: tempPassword || password }).catch(err => console.error('Welcome email failed:', err));
+    }
+    sendRequestConfirmation({ email, name, ref, serviceType: service_type, country }).catch(err => console.error('Confirmation email failed:', err));
+    sendAdminAlert({ ref, name, email, serviceType: service_type, country }).catch(err => console.error('Admin alert email failed:', err));
+
     res.status(201).json({
       message: 'Service request submitted successfully.',
       request: { ...request, details_json: JSON.parse(request.details_json || '{}') },
@@ -227,6 +235,20 @@ router.put('/:id', authenticate, adminOnly, (req, res) => {
           status === 'rejected' ? 'warning' : 'success'
         );
       }
+    }
+
+    // Send email status update asynchronously
+    if (status && status !== request.status) {
+      const { sendStatusUpdateEmail } = require('../utils/mailer');
+      sendStatusUpdateEmail({
+        email: request.email,
+        name: request.name,
+        type: 'request',
+        ref: request.ref,
+        oldStatus: request.status,
+        newStatus: status,
+        notes: admin_notes || ''
+      }).catch(err => console.error('Status update email failed:', err));
     }
 
     res.json({ message: 'Service request updated successfully.' });

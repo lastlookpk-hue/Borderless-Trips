@@ -286,6 +286,20 @@ router.put('/applications/:id', authenticate, (req, res) => {
         invoice_url,
         id
       );
+
+      // Notify customer via email on status change
+      if (status && status !== app.status) {
+        const { sendStatusUpdateEmail } = require('../utils/mailer');
+        sendStatusUpdateEmail({
+          email: app.customer_email,
+          name: app.customer_name,
+          type: 'visa',
+          ref: app.app_ref,
+          oldStatus: app.status,
+          newStatus: status,
+          notes: notes || admin_notes || ''
+        }).catch(err => console.error('Visa status email failed:', err));
+      }
     } else {
       let isCoTraveler = false;
       try {

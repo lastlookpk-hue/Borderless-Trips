@@ -2294,6 +2294,19 @@ export default function AdminPage() {
                         </div>
                       </div>
 
+                      <h3 style={{ fontSize:15, fontWeight:700, margin:'24px 0 16px' }}>SMTP Email Configuration</h3>
+                      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14, background:'rgba(255,255,255,0.02)', padding:16, borderRadius:12, border:'1px solid var(--color-border)' }}>
+                        <div className="form-group"><label className="form-label">SMTP Server Host</label><input className="form-input" value={businessSettings.smtp_host||''} onChange={e=>setBusinessSettings({...businessSettings,smtp_host:e.target.value})} placeholder="e.g. smtp.gmail.com or smtp-relay.brevo.com"/></div>
+                        <div className="form-group"><label className="form-label">SMTP Port</label><input className="form-input" value={businessSettings.smtp_port||''} onChange={e=>setBusinessSettings({...businessSettings,smtp_port:e.target.value})} placeholder="e.g. 587 or 465"/></div>
+                        <div className="form-group"><label className="form-label">SMTP Login User</label><input className="form-input" value={businessSettings.smtp_user||''} onChange={e=>setBusinessSettings({...businessSettings,smtp_user:e.target.value})} placeholder="your-email@gmail.com"/></div>
+                        <div className="form-group"><label className="form-label">SMTP Password / App Key</label><input className="form-input" type="password" value={businessSettings.smtp_pass||''} onChange={e=>setBusinessSettings({...businessSettings,smtp_pass:e.target.value})} placeholder="••••••••••••"/></div>
+                        <div className="form-group"><label className="form-label">SMTP Sender Address ("From")</label><input className="form-input" value={businessSettings.smtp_from||''} onChange={e=>setBusinessSettings({...businessSettings,smtp_from:e.target.value})} placeholder="Borderless Trips &lt;info@borderlesstrips.com&gt;"/></div>
+                        <div className="form-group"><label className="form-label">Admin Notification Recipient</label><input className="form-input" value={businessSettings.smtp_alert_recipient||''} onChange={e=>setBusinessSettings({...businessSettings,smtp_alert_recipient:e.target.value})} placeholder="admin@borderlesstrips.com"/></div>
+                        <div style={{ gridColumn: 'span 2', fontSize: 11, color: 'var(--color-text-muted)', marginTop: 4 }}>
+                          💡 <strong>Setting Up For Free:</strong> You can use a free <strong>Brevo (formerly Sendinblue)</strong> SMTP account (300 emails/day free) or a free <strong>Gmail App Password</strong>. If these fields are left empty, the server will operate in offline mock mode, printing emails directly to the server terminal log.
+                        </div>
+                      </div>
+
                       <button className="btn btn-primary" style={{ marginTop:24 }} onClick={handleSaveSettings}><Save size={16}/> Save Settings</button>
                     </div>
                   </div>
