@@ -49,3 +49,9 @@ Thumbs.db
 # Deployment archives
 boardless_deploy.zip
 
+
+# wrangler files
+.wrangler
+.dev.vars*
+!.dev.vars.example
+!.env.example
